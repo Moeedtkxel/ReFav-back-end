@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from django.db import models
+from django.db import models, connection
 
 
 # Create your models here.
@@ -25,3 +25,25 @@ class RankList(models.Model):
                 if self.created_at.year == time.year:
                     return str(time.month - self.created_at.month) + " months ago"
         return self.created_at
+
+    def are_friends(self):
+        friends = 0
+        query = """
+            SELECT CASE WHEN EXISTS (
+            SELECT * FROM ranklist_ranklist, buddylist_buddylist
+            WHERE (ranklist_ranklist.creator_id = buddylist_buddylist.buddy1_id AND buddylist_buddylist.buddy2_id = 11 /*user_id*/)
+            OR (ranklist_ranklist.creator_id = buddylist_buddylist.buddy2_id AND buddylist_buddylist.buddy1_id = 11 /*user_id*/)        
+            OR (ranklist_ranklist.creator_id = 11 /*user_id*/)
+            )
+            THEN CAST(1 AS BIT)
+            ELSE CAST(0 AS BIT) 
+            END"""
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            if cursor.rowcount != 0:
+                result = cursor.fetchone()
+
+                if result is not None:
+                    friends = result[0]
+
+        return friends
